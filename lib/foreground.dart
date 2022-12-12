@@ -1,38 +1,79 @@
+import 'dart:ui';
+
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 
 class Foreground {
   static const MethodChannel _methodChannel =
       MethodChannel('com.lootexe.foreground.method', JSONMethodCodec());
 
   /// Start the foreground service
-  static Future<bool> startService(
-      {required ForegroundConfiguration configuration}) async {
-    return await _methodChannel.invokeMethod(
-        'startService', configuration.toJson());
-  }
+  static Future<bool> startService({
+    required ForegroundConfiguration configuration,
+  }) async =>
+      await _methodChannel.invokeMethod('startService', configuration.toJson());
 
   /// Stops a running service
-  static Future<bool> stopService() async {
-    return await _methodChannel.invokeMethod('stopService');
-  }
+  static Future<bool> stopService() async =>
+      await _methodChannel.invokeMethod('stopService');
 
+  /// Returns true if the service is currently active
   static Future<bool> get isRunning async =>
       await _methodChannel.invokeMethod('isRunning');
+
+  /// Sets the task handler that gets executed on service start and stop
+  /// Both methods run in an isolate different from the main app isolate
+  static void setTaskHandler({
+    VoidCallback? onStarted,
+    VoidCallback? onStopped,
+  }) {
+    const channel = MethodChannel('com.lootexe.foreground.method.background');
+
+    WidgetsFlutterBinding.ensureInitialized();
+
+    channel.setMethodCallHandler((handler) async {
+      switch (handler.method) {
+        case 'onStarted':
+          if (onStarted != null) {
+            onStarted();
+          }
+          break;
+        case 'onStopped':
+          if (onStopped != null) {
+            onStopped();
+          }
+          break;
+      }
+    });
+
+    channel.invokeMethod('initialize');
+  }
 }
 
 class ForegroundConfiguration {
   const ForegroundConfiguration({
     required this.notification,
     this.runOnBoot = true,
+    this.callback,
   });
 
   final NotificationConfiguration notification;
   final bool runOnBoot;
+  final VoidCallback? callback;
 
-  Map toJson() => {
-        'notification': notification.toJson(),
-        'runOnBoot': runOnBoot,
-      };
+  Map toJson() {
+    final Map json = {
+      'notification': notification.toJson(),
+      'runOnBoot': runOnBoot,
+    };
+
+    if (callback != null) {
+      json['callback'] =
+          PluginUtilities.getCallbackHandle(callback!)?.toRawHandle();
+    }
+
+    return json;
+  }
 }
 
 class NotificationConfiguration {
