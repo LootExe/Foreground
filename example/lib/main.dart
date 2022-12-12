@@ -11,6 +11,20 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
+@pragma('vm:entry-point')
+void foregroundCallback() {
+  Foreground.setTaskHandler(
+    onStarted: () {
+      print('Foreground service started.\nThis method is called '
+          'from a different Dart isolate');
+    },
+    onStopped: () {
+      print('Foreground service stopped.\nThis method is called '
+          'from a different Dart isolate');
+    },
+  );
+}
+
 class _MyAppState extends State<MyApp> {
   Future<bool> _startForeground() async {
     const channelConfig = ChannelConfiguration(
@@ -29,6 +43,8 @@ class _MyAppState extends State<MyApp> {
 
     const configuration = ForegroundConfiguration(
       notification: notificationConfig,
+      runOnBoot: true,
+      callback: foregroundCallback,
     );
 
     return await Foreground.startService(
