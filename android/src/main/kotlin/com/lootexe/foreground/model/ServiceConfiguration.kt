@@ -6,7 +6,8 @@ import com.google.gson.GsonBuilder
 import com.google.gson.JsonParseException
 
 data class ServiceConfiguration(val notification: NotificationConfiguration,
-                                val runOnBoot: Boolean) {
+                                val runOnBoot: Boolean,
+                                val callback: Long?) {
     companion object {
         private const val KEY = "ServiceConfiguration"
 
